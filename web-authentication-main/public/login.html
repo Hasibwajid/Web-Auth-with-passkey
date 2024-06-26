@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login using Passkey</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #f06, #4a90e2);
+            color: white;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #121415;
+            position: absolute;
+            top: 50px;
+            font-weight: bold;
+        }
+        form {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #007bff;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .create-account-link {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #0b0a0a;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .create-account-link:hover {
+            color: #0602eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Login using Passkey</h1>
+    <form id="login-form">
+        <input type="text" placeholder="User ID" id="userId" required />
+        <button type="submit">Login with Passkey</button>
+        <div class="create-account-link">
+            <a href="signup.html" style="font-weight: bold; color: rgb(27, 25, 25); text-decoration: none; ">Create an account?</a>
+        </div>
+    </form>
+
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
+    <script>
+         const form = document.getElementById('login-form');
+         const userIdField = document.getElementById('userId')
+
+         form.addEventListener('submit', async e => {
+            e.preventDefault()
+            const userId = userIdField.value;
+            
+            const response = await fetch('/login-challenge', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId })
+            })
+
+            const challengeResult = await response.json()
+
+            if (!challengeResult.success) {
+                alert('Login failed. Please check your credentials.');
+                return;
+            }
+
+            const { options } = challengeResult // Server side challenge
+
+            const authenticationResult = await SimpleWebAuthnBrowser.startAuthentication(options)
+            console.log(authenticationResult)
+
+            const verifyResponse = await fetch('/login-verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId, cred: authenticationResult })
+            })
+
+            const verifyResult = await verifyResponse.json()
+
+            if (verifyResult.success) {
+                // Redirect to profile.html after successful login
+                window.location.href = 'profile.html';
+            } else {
+                alert('Login verification failed. Please try again.');
+            }
+         })
+
+    </script>
+</body>
+</html>

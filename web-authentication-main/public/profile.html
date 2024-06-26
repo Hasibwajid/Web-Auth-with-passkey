@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #f06, #4a90e2);
+            color: white;
+            text-align: center;
+            position: relative; /* Position relative for absolute positioning */
+        }
+        h1 {
+            margin-bottom: 2rem;
+        }
+        img {
+            width: 180px; /* Increased image width */
+            height: auto;
+            margin-bottom: 2rem;
+            border-radius: 50%; /* Circular profile image */
+        }
+        .user-profile {
+            position: absolute;
+            top: 10px;
+            height: 100px;
+            width: 100px;
+            right: 62px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .user-id-container {
+            position: absolute;
+            right: 19px;
+            top: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px; /* Margin added to separate from image */
+        }
+        .user-id-container:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        .user-id {
+            font-size: 0.8rem;
+            color: white;
+            margin-top: 5px;
+        }
+        button {
+            padding: 20px 90px;
+            background: #007bff;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .small-button {
+            padding: 10px 20px;
+            background: #007bff;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-decoration: none;
+        }
+        .small-button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div  id="userProfile">
+        <img src="pp.png" class="user-profile" alt="User Profile Icon">
+        <div class="user-id-container" id="userIdContainer">
+            <span class="user-id" id="userIdDisplay">User ID: Copyable ID</span>
+        </div>
+    </div>
+
+    <img src="th.png" alt="Profile Image">
+    <button id="register-passkey-btn">Register Passkey</button>
+
+    <div class="button-container">
+        <a href="login.html" class="small-button">LogOut</a>
+    </div>
+
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
+    <script>
+        const registerPasskeyBtn = document.getElementById('register-passkey-btn');
+        const userIdContainer = document.getElementById('userIdContainer');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+
+        // Function to get user ID from URL parameter
+        function getUserIdFromUrl() {
+            const url = new URL(window.location.href);
+            return url.searchParams.get('userId');
+        }
+
+        // Update user ID display function
+        function updateUserIdDisplay(userId) {
+            userIdDisplay.textContent = `User ID: ${userId}`;
+        }
+
+        registerPasskeyBtn.addEventListener('click', async () => {
+            const userId = getUserIdFromUrl();
+
+            const response = await fetch('/register-challenge', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId })
+            });
+
+            const challengeResult = await response.json();
+            const { options } = challengeResult;
+
+            const authenticationResult = await SimpleWebAuthnBrowser.startRegistration({ ...options });
+            console.log(authenticationResult);
+
+            await fetch('/register-verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId, cred: authenticationResult })
+            });
+
+            // Update user ID display after registration
+            updateUserIdDisplay(userId);
+        });
+
+        // Copy user ID on click
+        userIdContainer.addEventListener('click', () => {
+            const userIdText = userIdDisplay.textContent.replace('User ID: ', ''); // Get the actual user ID
+            navigator.clipboard.writeText(userIdText)
+                .then(() => {
+                    alert('User ID copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                });
+        });
+
+        // Initial update of user ID display when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const userId = getUserIdFromUrl();
+            updateUserIdDisplay(userId);
+        });
+    </script>
+</body>
+</html>
